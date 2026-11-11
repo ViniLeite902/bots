@@ -1,0 +1,44 @@
+import discord
+from discord.ext import commands
+import requests
+import pyttsx3
+
+intents = discord.Intents.default()
+intents.message_content = True
+client = commands.Bot(command_prefix="!", intents=intents)
+engine = pyttsx3.init()
+fala_ativada = False
+
+def get_fact():
+    response = requests.get("https://uselessfacts.jsph.pl/random.json?language=en")
+    if response.status_code == 200:
+        data = response.json()
+        return data["text"]
+    else:
+        return "Could not retrieve a fact at this time."
+
+@client.command()
+async def activate(ctx):
+    global fala_ativada
+
+    await ctx.send("Você quer ativar a fala do bot? (sim/não):")
+    def check(m):
+        return m.author == ctx.author and m.channel == ctx.channel
+    msg = await client.wait_for("message", check=check)
+    resposta = msg.content.strip().lower()
+    if resposta == "sim":
+        fala_ativada = True
+        await ctx.send("A fala do bot foi ativada.")
+    elif resposta in {"não", "nao"}:
+        fala_ativada = False
+        await ctx.send("A fala do bot foi desativada.")
+    else:
+        await ctx.send("Resposta inválida. Por favor, responda com 'sim' ou 'não'.")
+
+@client.command()
+async def fact(ctx):
+    text = get_fact()
+    await ctx.send(text)
+    if fala_ativada:
+        engine.say(text)
+        engine.runAndWait()
